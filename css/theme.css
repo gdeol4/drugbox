@@ -1,0 +1,131 @@
+/* ============================================================
+   theme.css — Cyberpunk Colors, CRT Effects, Glow, Terminal
+   ============================================================ */
+
+/* --- CRT Scanline Overlay --- */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.08) 0px,
+    rgba(0, 0, 0, 0.08) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* --- Screen Flicker --- */
+.screen-flicker {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  background: transparent;
+  animation: flicker 0.15s infinite;
+  opacity: 0.03;
+}
+
+@keyframes flicker {
+  0%   { background: transparent; }
+  50%  { background: rgba(255, 255, 255, 0.015); }
+  100% { background: transparent; }
+}
+
+/* --- Blinking Cursor --- */
+.blink {
+  animation: blink-anim 1s step-end infinite;
+}
+@keyframes blink-anim {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* --- Spinning Indicator --- */
+.spin {
+  display: inline-block;
+  animation: spin-anim 1s linear infinite;
+}
+@keyframes spin-anim {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* --- Neon Text Glow --- */
+.cyber-title {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  color: var(--neon-green);
+  text-shadow:
+    var(--glow-green-sm),
+    var(--glow-green-md),
+    0 0 40px rgba(51, 255, 119, 0.4);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.title-bracket {
+  color: var(--neon-amber);
+  text-shadow: var(--glow-amber-sm);
+}
+
+.cyber-subtitle {
+  font-family: var(--font-tech);
+  font-size: 1.1rem;
+  color: var(--neon-green-dim);
+  text-shadow: var(--glow-green-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* --- Prompt Arrow --- */
+.prompt {
+  color: #dc3232;
+  margin-right: 0.3em;
+}
+
+/* --- Footer --- */
+.app-footer {
+  padding: 1.5rem 1rem;
+  border-top: 1px solid var(--mid-gray);
+  margin-top: 3rem;
+}
+
+.footer-text {
+  font-family: var(--font-tech);
+  font-size: 0.75rem;
+  color: var(--light-gray);
+  letter-spacing: 0.05em;
+}
+
+/* --- Bulma Overrides --- */
+.section {
+  background-color: transparent;
+}
+
+.title, .subtitle {
+  color: inherit;
+}
+
+/* --- Status Colors --- */
+.status-idle {
+  color: rgba(255, 255, 255, 0.5);
+}
+.status-checking {
+  color: rgba(255, 255, 255, 0.7);
+}
+.status-valid {
+  color: #ffffff;
+}
+.status-invalid {
+  color: #dc3232;
+}

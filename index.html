@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" class="cyberpunk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOLECTRL // Molecular Analysis Terminal</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+
+  <!-- Our CSS -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/terminal.css">
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+  <!-- RDKit.js -->
+  <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
+
+  <!-- 3Dmol.js (optional 3D viewer) -->
+  <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+</head>
+<body x-data="appInit()" x-init="boot()">
+
+  <!-- ===== CRT SCANLINE OVERLAY ===== -->
+  <div class="crt-overlay" aria-hidden="true"></div>
+
+  <!-- ===== SCREEN FLICKER ===== -->
+  <div class="screen-flicker" aria-hidden="true"></div>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="columns is-centered is-marginless is-gapless fullscreen">
+
+    <!-- One big column: 11/12 width, full height -->
+    <div class="column is-9 fullscreen-col" style="padding: 0;">
+
+      <!-- Monitor container: fills the column, position relative for screen overlay -->
+      <div class="vintage-computer" id="monitor-container">
+
+        <img
+          src="assets/retro_monitor.png"
+          srcset="assets/retro_monitor.png 1x, assets/retro_monitor_2x.png 2x"
+          alt="Retro Cyberpunk Monitor"
+          class="machine-image"
+          id="monitor-image"
+        >
+
+        <!-- Screen overlay -->
+        <div class="terminal-screen-overlay" id="screen-overlay">
+
+          <div class="screen-header">
+            <span class="screen-tab active">INPUT</span>
+            <span class="screen-tab">PREVIEW</span>
+            <span class="screen-tab">RESULTS</span>
+            <span class="screen-header-spacer"></span>
+            <span class="screen-clock" x-text="clock"></span>
+          </div>
+
+          <div class="screen-body">
+
+            <div class="columns is-gapless screen-columns">
+              <div class="column is-5">
+                <div class="input-panel">
+                  <label class="input-label">
+                    <span class="prompt">></span> ENTER SMILES
+                  </label>
+                  <input
+                    type="text"
+                    class="smiles-input"
+                    x-model="smilesInput"
+                    @input.debounce.400ms="onSmilesChange()"
+                    placeholder="e.g. CCO or c1ccccc1C(=O)O..."
+                    spellcheck="false"
+                    autocomplete="off"
+                  >
+                  <div class="input-status">
+                    <span x-show="!smilesInput.length" class="status-idle">
+                      <span class="blink">_</span> AWAITING INPUT
+                    </span>
+                    <span x-show="smilesInput.length && isValid === null" class="status-checking">
+                      <span class="spin">⟳</span> VALIDATING...
+                    </span>
+                    <span x-show="smilesInput.length && isValid === true" class="status-valid">
+                      ✓ VALID — <span x-text="canonicalSmiles"></span>
+                    </span>
+                    <span x-show="smilesInput.length && isValid === false" class="status-invalid">
+                      ✗ <span x-text="errorMessage"></span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="column is-7">
+                <div class="preview-panel">
+                  <div class="preview-header">
+                    <span class="prompt">></span> STRUCTURE PREVIEW
+                  </div>
+                  <div class="preview-canvas" id="mol2d-canvas">
+                    <div x-show="!moleculeSVG && !has3D" class="preview-placeholder">
+                      <div class="placeholder-icon">◈</div>
+                      <p>MOLECULE WILL RENDER HERE</p>
+                    </div>
+                    <div x-show="moleculeSVG && !has3D" x-html="moleculeSVG" class="mol-svg-container"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="descriptors-strip" x-show="Object.keys(frontendDescriptors).length">
+              <span class="prompt">></span> QUICK DESCRIPTORS:
+              <span class="desc-badge" x-show="frontendDescriptors.MW">MW: <span x-text="frontendDescriptors.MW"></span></span>
+              <span class="desc-badge" x-show="frontendDescriptors.logP">logP: <span x-text="frontendDescriptors.logP"></span></span>
+              <span class="desc-badge" x-show="frontendDescriptors.HBA">HBA: <span x-text="frontendDescriptors.HBA"></span></span>
+              <span class="desc-badge" x-show="frontendDescriptors.HBD">HBD: <span x-text="frontendDescriptors.HBD"></span></span>
+              <span class="desc-badge" x-show="frontendDescriptors.RotBonds">RotBonds: <span x-text="frontendDescriptors.RotBonds"></span></span>
+              <span class="desc-badge" x-show="frontendDescriptors.TPSA">TPSA: <span x-text="frontendDescriptors.TPSA"></span></span>
+            </div>
+
+            <div class="analyze-row">
+              <button class="btn-analyze"
+                :disabled="isValid !== true || isLoading"
+                @click="runAnalysis()"
+                x-text="isLoading ? '⟳ PROCESSING...' : '▶ EXECUTE ANALYSIS'"
+              ></button>
+              <p class="analyze-hint" x-show="isValid !== true && smilesInput.length">
+                Enter a valid SMILES string to enable analysis
+              </p>
+            </div>
+
+            <div class="error-banner" x-show="apiError">
+              <span class="error-icon">⚠</span>
+              <span x-text="apiError"></span>
+              <button class="error-dismiss" @click="apiError = null">×</button>
+            </div>
+
+            <div class="results-panel" x-show="lambdaResults">
+              <div class="results-header">
+                <span class="prompt">></span> LAMBDA ANALYSIS RESULTS
+                <span class="results-timestamp" x-text="'[' + resultTimestamp + ']'"></span>
+              </div>
+              <div class="results-body">
+
+                <div class="result-section" x-show="lambdaResults?.descriptors">
+                  <h3 class="result-section-title"><span class="prompt">>></span> MOLECULAR DESCRIPTORS</h3>
+                  <div class="result-grid">
+                    <template x-for="(val, key) in lambdaResults?.descriptors" :key="key">
+                      <div class="result-card">
+                        <span class="result-key" x-text="key"></span>
+                        <span class="result-val" x-text="typeof val === 'number' ? val.toFixed(3) : val"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="result-section" x-show="lambdaResults?.mordred && lambdaResults?.mordred.count">
+                  <h3 class="result-section-title"><span class="prompt">>></span> MORDRED 2D DESCRIPTORS</h3>
+                  <p style="font-family:var(--font-tech);font-size:0.7rem;color:rgba(255,255,255,0.5);margin-bottom:0.5rem;">
+                    <span x-text="lambdaResults?.mordred?.count"></span> descriptors computed
+                  </p>
+                  <div class="result-grid">
+                    <template x-for="(val, key) in lambdaResults?.mordred?.values" :key="key">
+                      <div class="result-card ml-card">
+                        <span class="result-key" x-text="key"></span>
+                        <span class="result-val" x-text="typeof val === 'number' ? val.toFixed(3) : val"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="result-section" x-show="lambdaResults?.warnings && lambdaResults?.warnings.length">
+                  <h3 class="result-section-title"><span class="prompt">>></span> DRUG-LIKENESS WARNINGS</h3>
+                  <ul class="warnings-list">
+                    <template x-for="warn in lambdaResults?.warnings" :key="warn">
+                      <li class="warning-item"><span class="warn-icon">⚠</span> <span x-text="warn"></span></li>
+                    </template>
+                  </ul>
+                </div>
+
+                <div class="raw-toggle" @click="showRaw = !showRaw">
+                  <span class="prompt">></span>
+                  <span x-text="showRaw ? '[-] HIDE RAW JSON' : '[+] SHOW RAW JSON'"></span>
+                </div>
+                <pre class="raw-json" x-show="showRaw" x-text="JSON.stringify(lambdaResults?.raw || lambdaResults, null, 2)"></pre>
+
+              </div>
+            </div>
+
+          </div><!-- /screen-body -->
+        </div><!-- /terminal-screen-overlay -->
+
+          </div><!-- /vintage-computer -->
+
+    </div><!-- /column -->
+  </div><!-- /columns -->
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="js/config.js"></script>
+  <script src="js/rdkit.js"></script>
+  <script src="js/validate.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Sync screen overlay to image -->
+  <script>
+    (function() {
+      const container = document.getElementById('monitor-container');
+      const img = document.getElementById('monitor-image');
+      const overlay = document.getElementById('screen-overlay');
+      if (!container || !img || !overlay) return;
+
+      function sync() {
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        const iw = img.naturalWidth;
+        const ih = img.naturalHeight;
+        if (!iw || !ih) return;
+
+        // object-fit: contain math
+        const scale = Math.min(cw / iw, ch / ih);
+        const renderedW = iw * scale;
+        const renderedH = ih * scale;
+        const offsetX = (cw - renderedW) / 2;
+        const offsetY = (ch - renderedH) / 2;
+
+        // Screen fractions within the image
+        const sl = 0.055, sr = 0.825, st = 0.12, sb = 0.855;
+
+        overlay.style.left   = (offsetX + renderedW * sl) + 'px';
+        overlay.style.right  = (cw - offsetX - renderedW * sr) + 'px';
+        overlay.style.top    = (offsetY + renderedH * st) + 'px';
+        overlay.style.bottom = (ch - offsetY - renderedH * sb) + 'px';
+      }
+
+      sync();
+      window.addEventListener('resize', sync);
+      img.addEventListener('load', sync);
+      // Watch for container size changes
+      if (window.ResizeObserver) {
+        new ResizeObserver(sync).observe(container);
+      }
+    })();
+  </script>
+
+</body>
+</html>
