@@ -4,11 +4,6 @@
 
 const LambdaAPI = (() => {
 
-  /**
-   * Normalize the raw Lambda response into the shape the UI expects.
-   * Lambda returns: basic_rdkit, mordred_2d, mordred_2d_count, limits, etc.
-   * UI expects: descriptors, mordred, warnings, limits, raw.
-   */
   function normalizeLambdaResults(raw) {
     const basic = raw.basic_rdkit || {};
 
@@ -25,7 +20,6 @@ const LambdaAPI = (() => {
       FracCsp3: basic.FractionCSP3,
     };
 
-    // Rule-based drug-likeness warnings (Lipinski / Veber style)
     const warnings = [];
     if (descriptors.MW != null && descriptors.MW > 500) {
       warnings.push('Molecular weight is above 500 g/mol.');
@@ -53,27 +47,17 @@ const LambdaAPI = (() => {
       },
       limits: raw.limits || null,
       warnings,
-      // Keep raw for JSON debug view
       raw,
     };
   }
 
   /**
-   * Send a canonical SMILES to the Lambda backend for analysis.
-   * @param {string} canonicalSmiles
-   * @returns {Promise<object>} Normalized result object
+   * Generic fetch helper — POST JSON, return parsed JSON.
    */
-  async function analyzeMolecule(canonicalSmiles) {
-    if (!canonicalSmiles) {
-      throw new Error('No SMILES to analyze');
-    }
-
+  async function postJSON(body) {
     const url = APP_CONFIG.lambdaUrl;
-
     if (!url || url.includes('your-function-url')) {
-      throw new Error(
-        'Lambda Function URL not configured. Please set APP_CONFIG.lambdaUrl in js/config.js'
-      );
+      throw new Error('Lambda Function URL not configured. Set APP_CONFIG.lambdaUrl in js/config.js');
     }
 
     const controller = new AbortController();
@@ -82,10 +66,8 @@ const LambdaAPI = (() => {
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ smiles: canonicalSmiles }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -93,61 +75,60 @@ const LambdaAPI = (() => {
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
-        throw new Error(
-          `Lambda returned ${response.status} ${response.statusText}${errorBody ? ': ' + errorBody : ''}`
-        );
+        throw new Error('Lambda returned ' + response.status + ' ' + response.statusText + (errorBody ? ': ' + errorBody : ''));
       }
 
       const rawData = await response.json();
-
-      // Validate response structure
       if (!rawData || typeof rawData !== 'object') {
         throw new Error('Lambda returned invalid JSON');
       }
-
-      // Normalize into UI-friendly shape
-      return normalizeLambdaResults(rawData);
-
+      return rawData;
     } catch (err) {
       clearTimeout(timeoutId);
-
       if (err.name === 'AbortError') {
-        throw new Error(`Request timed out after ${APP_CONFIG.apiTimeout / 1000}s`);
+        throw new Error('Request timed out after ' + (APP_CONFIG.apiTimeout / 1000) + 's');
       }
-
-      // Network / CORS errors — log full details to console
-      console.error('[API] Fetch failed:', {
-        message: err.message,
-        name: err.name,
-        cause: err.cause,
-      });
       if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
         throw new Error('Network error: could not reach Lambda. Check URL and CORS settings.');
       }
-
       throw err;
     }
   }
 
   /**
-   * Health check / ping the Lambda to verify connectivity.
-   * @returns {Promise<boolean>}
+   * Analyze molecule — basic descriptors + Mordred.
    */
+  async function analyzeMolecule(canonicalSmiles) {
+    if (!canonicalSmiles) throw new Error('No SMILES to analyze');
+    const raw = await postJSON({ smiles: canonicalSmiles });
+    return normalizeLambdaResults(raw);
+  }
+
+  /**
+   * Analyze ADMET — called separately with include_admet flag.
+   * Lambda returns admet properties when this flag is set.
+   */
+  async function analyzeADMET(canonicalSmiles) {
+    if (!canonicalSmiles) return null;
+    try {
+      const raw = await postJSON({ smiles: canonicalSmiles, include_admet: true });
+      // Lambda may return admet at top level or nested
+      return raw.admet || raw.admet_properties || null;
+    } catch (err) {
+      console.warn('[API] ADMET fetch failed (non-fatal):', err.message);
+      return null;
+    }
+  }
+
   async function ping() {
     try {
-      const response = await fetch(APP_CONFIG.lambdaUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ping: true }),
-        signal: AbortSignal.timeout(5000),
-      });
-      return response.ok;
+      await postJSON({ ping: true });
+      return true;
     } catch (_) {
       return false;
     }
   }
 
-  return { analyzeMolecule, ping };
+  return { analyzeMolecule, analyzeADMET, ping };
 
 })();
-

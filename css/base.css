@@ -2,17 +2,14 @@
    base.css — CSS Variables, Fonts, Resets, Body Defaults
    ============================================================ */
 
-/* --- CSS Custom Properties --- */
 :root {
-  /* Core palette */
-  --black-deep:    #0a0a0a;
-  --black-screen:  #0d1110;
-  --black-panel:   #111613;
+  --black-deep:    #050505;
+  --black-screen:  #080808;
+  --black-panel:   #0c0c0c;
   --dark-gray:     #1a1f1d;
   --mid-gray:      #2a302d;
   --light-gray:    #4a504d;
 
-  /* Neon accents */
   --neon-green:        #33ff77;
   --neon-green-dim:    #1a9944;
   --neon-green-glow:   #22cc55;
@@ -23,49 +20,37 @@
   --neon-red:          #ff3344;
   --neon-red-dim:      #991122;
   --neon-magenta:      #dd44cc;
-  --neon-white:        #ddffdd;
+  --neon-white:        #ffffff;
 
-  /* Glow effects */
-  --glow-green-sm:  0 0 4px rgba(51, 255, 119, 0.3);
-  --glow-green-md:  0 0 10px rgba(51, 255, 119, 0.5);
-  --glow-green-lg:  0 0 20px rgba(51, 255, 119, 0.6);
-  --glow-amber-sm:  0 0 4px rgba(255, 170, 0, 0.3);
-  --glow-amber-md:  0 0 10px rgba(255, 170, 0, 0.5);
-  --glow-red-sm:    0 0 4px rgba(255, 51, 68, 0.3);
-  --glow-red-md:    0 0 10px rgba(255, 51, 68, 0.5);
-  --glow-cyan-sm:   0 0 4px rgba(0, 221, 204, 0.3);
-  --glow-cyan-md:   0 0 10px rgba(0, 221, 204, 0.5);
+  --glow-green-sm:  0 0 4px rgba(51,255,119,0.3);
+  --glow-green-md:  0 0 10px rgba(51,255,119,0.5);
+  --glow-green-lg:  0 0 20px rgba(51,255,119,0.6);
+  --glow-amber-sm:  0 0 4px rgba(255,170,0,0.3);
+  --glow-amber-md:  0 0 10px rgba(255,170,0,0.5);
+  --glow-red-sm:    0 0 4px rgba(255,51,68,0.3);
+  --glow-red-md:    0 0 10px rgba(255,51,68,0.5);
+  --glow-cyan-sm:   0 0 4px rgba(0,221,204,0.3);
+  --glow-cyan-md:   0 0 10px rgba(0,221,204,0.5);
+  --glow-white-sm:  0 0 4px rgba(255,255,255,0.3);
+  --glow-white-md:  0 0 10px rgba(255,255,255,0.5);
 
-  /* Fonts */
   --font-display:   'VT323', 'Courier New', monospace;
   --font-mono:      'IBM Plex Mono', 'Courier New', monospace;
   --font-tech:      'Share Tech Mono', 'Courier New', monospace;
 
-  /* Sizing */
-  --border-radius:  3px;
-  --border-width:   1px;
+  --border-radius:  2px;
+  --border-width:   2px;
   --transition-fast: 0.15s ease;
   --transition-med:  0.3s ease;
 }
 
-/* --- Reset --- */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* --- Body --- */
-html {
-  font-size: 16px;
-  scroll-behavior: smooth;
-}
+html { font-size: 16px; scroll-behavior: smooth; }
 
 html.cyberpunk {
   background-color: var(--black-deep);
-  color: var(--neon-green);
+  color: #ffffff;
   font-family: var(--font-mono);
   line-height: 1.6;
   min-height: 100vh;
@@ -74,51 +59,20 @@ html.cyberpunk {
 
 body {
   background-color: var(--black-deep);
-  color: var(--neon-green);
+  color: #ffffff;
   font-family: var(--font-mono);
   min-height: 100vh;
   position: relative;
 }
 
-/* --- Selection --- */
-::selection {
-  background: var(--neon-green-dim);
-  color: var(--black-deep);
-}
+::selection { background: rgba(255,255,255,0.2); color: #ffffff; }
 
-::-moz-selection {
-  background: var(--neon-green-dim);
-  color: var(--black-deep);
-}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--black-panel); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
 
-/* --- Scrollbar --- */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--black-panel);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--neon-green-dim);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-green);
-}
+a { color: #ffffff; text-decoration: none; transition: color var(--transition-fast); }
+a:hover { color: #ffffff; text-shadow: var(--glow-white-sm); }
 
-/* --- Links --- */
-a {
-  color: var(--neon-cyan);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-a:hover {
-  color: var(--neon-green);
-  text-shadow: var(--glow-green-sm);
-}
-
-/* --- Images --- */
-img {
-  max-width: 100%;
-  height: auto;
-}
+img { max-width: 100%; height: auto; }

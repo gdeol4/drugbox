@@ -4,87 +4,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MOLECTRL // Molecular Analysis Terminal</title>
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-
-  <!-- Bulma CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
-
-  <!-- Our CSS -->
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/terminal.css">
-
-  <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
-
-  <!-- RDKit.js -->
   <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
-
-  <!-- 3Dmol.js (optional 3D viewer) -->
   <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
 </head>
 <body x-data="appInit()" x-init="boot()">
-
-  <!-- ===== CRT SCANLINE OVERLAY ===== -->
   <div class="crt-overlay" aria-hidden="true"></div>
-
-  <!-- ===== SCREEN FLICKER ===== -->
   <div class="screen-flicker" aria-hidden="true"></div>
-
-  <!-- ===== MAIN LAYOUT ===== -->
-  <div class="columns is-centered is-marginless is-gapless fullscreen">
-
-    <!-- One big column: 11/12 width, full height -->
-    <div class="column is-9 fullscreen-col" style="padding: 0;">
-
-      <!-- Monitor container: fills the column, position relative for screen overlay -->
+  <div class="columns is-centered fullscreen">
+    <div class="column is-9 fullscreen-col">
       <div class="vintage-computer" id="monitor-container">
-
-        <img
-          src="assets/retro_monitor.png"
-          srcset="assets/retro_monitor.png 1x, assets/retro_monitor_2x.png 2x"
-          alt="Retro Cyberpunk Monitor"
-          class="machine-image"
-          id="monitor-image"
-        >
-
-        <!-- Screen overlay -->
+        <img src="assets/retro_monitor.png" srcset="assets/retro_monitor.png 1x, assets/retro_monitor_2x.png 2x" alt="Retro Cyberpunk Monitor" class="machine-image" id="monitor-image">
         <div class="terminal-screen-overlay" id="screen-overlay">
 
+          <!-- ===== TABS ===== -->
           <div class="screen-header">
-            <span class="screen-tab active">INPUT</span>
-            <span class="screen-tab">PREVIEW</span>
-            <span class="screen-tab">RESULTS</span>
+            <span class="screen-tab" :class="{ active: activeTab === 'input' }" @click="switchTab('input')">INPUT</span>
+            <span class="screen-tab" :class="{ active: activeTab === 'analysis', 'tab-alert': tabAlert === 'analysis' }" @click="switchTab('analysis')">
+              ANALYSIS<span x-show="activeTab !== 'analysis' && tabAlert === 'analysis'" class="tab-alert-dot"></span>
+            </span>
+            <span class="screen-tab" :class="{ active: activeTab === 'docking' }" @click="switchTab('docking')">DOCKING</span>
             <span class="screen-header-spacer"></span>
             <span class="screen-clock" x-text="clock"></span>
           </div>
 
           <div class="screen-body">
 
-            <div class="columns is-gapless screen-columns">
-              <div class="column is-5">
-                <div class="input-panel">
+            <!-- ===== INPUT TAB ===== -->
+            <div class="tab-panel" x-show="activeTab === 'input'">
+
+              <!-- TOP ROW: Input left, Molecule right -->
+              <div class="top-row" :class="{ 'top-row--split': analysisDone }">
+
+                <!-- LEFT: SMILES + Execute -->
+                <div class="top-left">
                   <label class="input-label">
                     <span class="prompt">></span> ENTER SMILES
+                    <span x-show="analysisDone" class="hint-blink">[NEW MOLECULE?]</span>
                   </label>
-                  <input
-                    type="text"
-                    class="smiles-input"
+                  <input type="text" class="smiles-input"
                     x-model="smilesInput"
-                    @input.debounce.400ms="onSmilesChange()"
+                    @input="onSmilesChange()"
                     placeholder="e.g. CCO or c1ccccc1C(=O)O..."
-                    spellcheck="false"
-                    autocomplete="off"
+                    spellcheck="false" autocomplete="off"
                   >
                   <div class="input-status">
                     <span x-show="!smilesInput.length" class="status-idle">
-                      <span class="blink">_</span> AWAITING INPUT
+                      <span class="blink">▁</span> AWAITING INPUT
                     </span>
                     <span x-show="smilesInput.length && isValid === null" class="status-checking">
                       <span class="spin">⟳</span> VALIDATING...
@@ -96,11 +71,23 @@
                       ✗ <span x-text="errorMessage"></span>
                     </span>
                   </div>
+                  <button class="btn-analyze"
+                    :disabled="isValid !== true || isLoading"
+                    @click="runAnalysis()"
+                    x-text="isLoading ? '⟳ RUNNING...' : '▶ EXECUTE'"
+                  ></button>
+                  <p class="analyze-hint" x-show="isValid !== true && smilesInput.length">
+                    Enter a valid SMILES string to enable analysis
+                  </p>
+                  <div class="error-banner" x-show="apiError">
+                    <span class="error-icon">⚠</span>
+                    <span x-text="apiError"></span>
+                    <button class="error-dismiss" @click="apiError = null">×</button>
+                  </div>
                 </div>
-              </div>
 
-              <div class="column is-7">
-                <div class="preview-panel">
+                <!-- RIGHT: Molecule Preview — moves to top-right square after analysis -->
+                <div class="top-right" :class="{ 'top-right--square': analysisDone }">
                   <div class="preview-header">
                     <span class="prompt">></span> STRUCTURE PREVIEW
                   </div>
@@ -112,58 +99,144 @@
                     <div x-show="moleculeSVG && !has3D" x-html="moleculeSVG" class="mol-svg-container"></div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div class="descriptors-strip" x-show="Object.keys(frontendDescriptors).length">
-              <span class="prompt">></span> QUICK DESCRIPTORS:
-              <span class="desc-badge" x-show="frontendDescriptors.MW">MW: <span x-text="frontendDescriptors.MW"></span></span>
-              <span class="desc-badge" x-show="frontendDescriptors.logP">logP: <span x-text="frontendDescriptors.logP"></span></span>
-              <span class="desc-badge" x-show="frontendDescriptors.HBA">HBA: <span x-text="frontendDescriptors.HBA"></span></span>
-              <span class="desc-badge" x-show="frontendDescriptors.HBD">HBD: <span x-text="frontendDescriptors.HBD"></span></span>
-              <span class="desc-badge" x-show="frontendDescriptors.RotBonds">RotBonds: <span x-text="frontendDescriptors.RotBonds"></span></span>
-              <span class="desc-badge" x-show="frontendDescriptors.TPSA">TPSA: <span x-text="frontendDescriptors.TPSA"></span></span>
-            </div>
+              </div><!-- /top-row -->
 
-            <div class="analyze-row">
-              <button class="btn-analyze"
-                :disabled="isValid !== true || isLoading"
-                @click="runAnalysis()"
-                x-text="isLoading ? '⟳ PROCESSING...' : '▶ EXECUTE ANALYSIS'"
-              ></button>
-              <p class="analyze-hint" x-show="isValid !== true && smilesInput.length">
-                Enter a valid SMILES string to enable analysis
-              </p>
-            </div>
+              <!-- BOTTOM ROW: Results -->
+              <div class="bottom-row" x-show="analysisDone && lambdaResults">
 
-            <div class="error-banner" x-show="apiError">
-              <span class="error-icon">⚠</span>
-              <span x-text="apiError"></span>
-              <button class="error-dismiss" @click="apiError = null">×</button>
-            </div>
-
-            <div class="results-panel" x-show="lambdaResults">
-              <div class="results-header">
-                <span class="prompt">></span> LAMBDA ANALYSIS RESULTS
-                <span class="results-timestamp" x-text="'[' + resultTimestamp + ']'"></span>
-              </div>
-              <div class="results-body">
-
-                <div class="result-section" x-show="lambdaResults?.descriptors">
-                  <h3 class="result-section-title"><span class="prompt">>></span> MOLECULAR DESCRIPTORS</h3>
-                  <div class="result-grid">
-                    <template x-for="(val, key) in lambdaResults?.descriptors" :key="key">
-                      <div class="result-card">
-                        <span class="result-key" x-text="key"></span>
-                        <span class="result-val" x-text="typeof val === 'number' ? val.toFixed(3) : val"></span>
-                      </div>
-                    </template>
-                  </div>
+                <div class="results-bar">
+                  <span class="prompt">></span> ANALYSIS RESULTS
+                  <span class="results-timestamp" x-text="formattedTimestamp"></span>
+                  <span class="results-smiles" x-text="canonicalSmiles"></span>
                 </div>
 
-                <div class="result-section" x-show="lambdaResults?.mordred && lambdaResults?.mordred.count">
-                  <h3 class="result-section-title"><span class="prompt">>></span> MORDRED 2D DESCRIPTORS</h3>
-                  <p style="font-family:var(--font-tech);font-size:0.7rem;color:rgba(255,255,255,0.5);margin-bottom:0.5rem;">
+                <div class="results-grid">
+
+                  <!-- COL 1: Molecular Descriptors -->
+                  <div class="res-col">
+                    <div class="res-col-title">DESCRIPTORS</div>
+                    <table class="res-table">
+                      <template x-for="(val, key) in lambdaResults?.descriptors" :key="key">
+                        <tr>
+                          <td class="res-key">
+                            <span x-text="key"></span>
+                            <span class="tooltip" x-text="getDescriptorTooltip(key)"></span>
+                          </td>
+                          <td class="res-val" x-text="typeof val === 'number' ? val.toFixed(3) : val"></td>
+                        </tr>
+                      </template>
+                    </table>
+                  </div>
+
+                  <!-- COL 2: Drug-Likeness -->
+                  <div class="res-col">
+                    <div class="res-col-title">DRUG-LIKENESS</div>
+
+                    <div class="dl-item" :class="hasLipinskiViolation ? 'dl-fail' : 'dl-pass'">
+                      <span class="dl-icon" x-text="hasLipinskiViolation ? '✗' : '✓'"></span>
+                      <div>
+                        <div class="dl-name">Lipinski Rule of 5
+                          <span class="tooltip">MW &le;500, logP &le;5, HBD &le;5, HBA &le;10</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="dl-item" :class="hasVeberViolation ? 'dl-fail' : 'dl-pass'">
+                      <span class="dl-icon" x-text="hasVeberViolation ? '✗' : '✓'"></span>
+                      <div>
+                        <div class="dl-name">Veber Rule
+                          <span class="tooltip">Rotatable bonds &le;10, TPSA &le;140&Aring;&sup2;</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="dl-item dl-qed">
+                      <span class="dl-icon">Q</span>
+                      <div>
+                        <div class="dl-name">QED (Drug-likeness)
+                          <span class="tooltip">Quantitative Estimate of Drug-likeness (0&ndash;1). Higher = more drug-like.</span>
+                        </div>
+                        <div class="dl-qed-bar-track">
+                          <div class="dl-qed-bar-fill" :style="{ width: (qedScore * 100) + '%' }"></div>
+                        </div>
+                        <span class="dl-qed-val" x-text="qedScore?.toFixed(3)"></span>
+                      </div>
+                    </div>
+
+                    <div class="dl-item dl-mordred">
+                      <span class="dl-icon">M</span>
+                      <div>
+                        <div class="dl-name">Mordred 2D Descriptors
+                          <span class="tooltip">Open-source cheminformatics descriptors (1613+ molecular features)</span>
+                        </div>
+                        <div class="dl-sub" x-text="(lambdaResults?.mordred?.count || 0) + ' computed'"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- COL 3: ADMET Properties -->
+                  <div class="res-col">
+                    <div class="res-col-title">ADMET</div>
+                    <div x-show="lambdaResults?.admet">
+                      <table class="res-table">
+                        <template x-for="(val, key) in lambdaResults?.admet" :key="key">
+                          <tr>
+                            <td class="res-key">
+                              <span x-text="key"></span>
+                              <span class="tooltip" x-text="getAdmetTooltip(key)"></span>
+                            </td>
+                            <td class="res-val" x-text="typeof val === 'number' ? val.toFixed(3) : val"></td>
+                          </tr>
+                        </template>
+                      </table>
+                    </div>
+                    <div x-show="!lambdaResults?.admet" class="res-empty">
+                      No ADMET data available
+                    </div>
+                  </div>
+
+                  <!-- COL 4: Downloads -->
+                  <div class="res-col">
+                    <div class="res-col-title">EXPORT</div>
+                    <button class="btn-dl" @click="downloadCSV('mordred')" x-show="hasMordred">
+                      ⬇ MORDRED (.csv)
+                    </button>
+                    <button class="btn-dl" @click="downloadCSV('admet')" x-show="lambdaResults?.admet">
+                      ⬇ ADMET (.csv)
+                    </button>
+                    <div x-show="!hasMordred && !lambdaResults?.admet" class="res-empty">
+                      No exportable data
+                    </div>
+                    <div class="raw-toggle" @click="showRaw = !showRaw">
+                      <span class="prompt">></span>
+                      <span x-text="showRaw ? '[-] HIDE RAW JSON' : '[+] SHOW RAW JSON'"></span>
+                    </div>
+                    <pre class="raw-json" x-show="showRaw" x-text="JSON.stringify(lambdaResults?.raw || lambdaResults, null, 2)"></pre>
+                  </div>
+
+                </div><!-- /results-grid -->
+
+              </div><!-- /bottom-row -->
+
+            </div><!-- /tab-panel input -->
+
+            <!-- ===== ANALYSIS TAB ===== -->
+            <div class="tab-panel" x-show="activeTab === 'analysis'">
+              <div x-show="!analysisDone" class="analysis-empty">
+                <div class="placeholder-icon">◈</div>
+                <p>NO ANALYSIS DATA</p>
+                <p class="empty-hint">Run analysis from the INPUT tab first</p>
+              </div>
+              <div x-show="analysisDone && lambdaResults" class="analysis-full">
+                <div class="results-bar">
+                  <span class="prompt">></span> FULL ANALYSIS
+                  <span class="results-timestamp" x-text="formattedTimestamp"></span>
+                </div>
+                <div class="analysis-scroll">
+                  <!-- Mordred full dump -->
+                  <div class="res-col-title">MORDRED 2D DESCRIPTORS</div>
+                  <p class="mordred-count">
                     <span x-text="lambdaResults?.mordred?.count"></span> descriptors computed
                   </p>
                   <div class="result-grid">
@@ -175,34 +248,34 @@
                     </template>
                   </div>
                 </div>
-
-                <div class="result-section" x-show="lambdaResults?.warnings && lambdaResults?.warnings.length">
-                  <h3 class="result-section-title"><span class="prompt">>></span> DRUG-LIKENESS WARNINGS</h3>
-                  <ul class="warnings-list">
-                    <template x-for="warn in lambdaResults?.warnings" :key="warn">
-                      <li class="warning-item"><span class="warn-icon">⚠</span> <span x-text="warn"></span></li>
-                    </template>
-                  </ul>
-                </div>
-
-                <div class="raw-toggle" @click="showRaw = !showRaw">
-                  <span class="prompt">></span>
-                  <span x-text="showRaw ? '[-] HIDE RAW JSON' : '[+] SHOW RAW JSON'"></span>
-                </div>
-                <pre class="raw-json" x-show="showRaw" x-text="JSON.stringify(lambdaResults?.raw || lambdaResults, null, 2)"></pre>
-
               </div>
-            </div>
+            </div><!-- /tab-panel analysis -->
+
+            <!-- ===== DOCKING TAB ===== -->
+            <div class="tab-panel" x-show="activeTab === 'docking'">
+              <div class="docking-placeholder">
+                <div class="docking-icon">⊙</div>
+                <div class="docking-title">MOLECULAR DOCKING</div>
+                <div class="docking-sub">AutoDock Vina Integration</div>
+                <div class="docking-status-bar">
+                  <span class="docking-status-dot"></span>
+                  STANDBY — AWAITING RECEPTOR DATA
+                </div>
+                <div class="docking-info">
+                  Upload a receptor PDB file and define a binding pocket to run molecular docking simulations.
+                </div>
+                <div class="docking-terminal-line">
+                  <span class="blink">▁</span> READY_
+                </div>
+              </div>
+            </div><!-- /tab-panel docking -->
 
           </div><!-- /screen-body -->
         </div><!-- /terminal-screen-overlay -->
-
-          </div><!-- /vintage-computer -->
-
+      </div><!-- /vintage-computer -->
     </div><!-- /column -->
   </div><!-- /columns -->
 
-  <!-- ===== SCRIPTS ===== -->
   <script src="js/config.js"></script>
   <script src="js/rdkit.js"></script>
   <script src="js/validate.js"></script>
@@ -210,47 +283,37 @@
   <script src="js/api.js"></script>
   <script src="js/state.js"></script>
   <script src="js/app.js"></script>
-
-  <!-- Sync screen overlay to image -->
   <script>
     (function() {
       const container = document.getElementById('monitor-container');
       const img = document.getElementById('monitor-image');
       const overlay = document.getElementById('screen-overlay');
       if (!container || !img || !overlay) return;
-
       function sync() {
         const cw = container.clientWidth;
         const ch = container.clientHeight;
         const iw = img.naturalWidth;
         const ih = img.naturalHeight;
         if (!iw || !ih) return;
-
-        // object-fit: contain math
         const scale = Math.min(cw / iw, ch / ih);
         const renderedW = iw * scale;
         const renderedH = ih * scale;
         const offsetX = (cw - renderedW) / 2;
         const offsetY = (ch - renderedH) / 2;
-
-        // Screen fractions within the image
         const sl = 0.055, sr = 0.825, st = 0.12, sb = 0.855;
-
         overlay.style.left   = (offsetX + renderedW * sl) + 'px';
         overlay.style.right  = (cw - offsetX - renderedW * sr) + 'px';
         overlay.style.top    = (offsetY + renderedH * st) + 'px';
         overlay.style.bottom = (ch - offsetY - renderedH * sb) + 'px';
       }
-
-      sync();
-      window.addEventListener('resize', sync);
       img.addEventListener('load', sync);
-      // Watch for container size changes
       if (window.ResizeObserver) {
         new ResizeObserver(sync).observe(container);
+      } else {
+        window.addEventListener('resize', sync);
       }
+      sync();
     })();
   </script>
-
 </body>
 </html>

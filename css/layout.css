@@ -1,80 +1,26 @@
 /* ============================================================
-   layout.css — Page Layout, Responsive Grid, Bulma Overrides
+   layout.css — Responsive Overrides, Bulma Overrides
    ============================================================ */
 
-/* --- Main Section --- */
-.main-section {
-  padding-top: 2rem;
-  padding-bottom: 1rem;
+.analyze-hint {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.3rem;
 }
 
-/* --- App Header --- */
-.app-header {
-  margin-bottom: 2rem;
-}
-
-/* --- Screen Columns (inside terminal) --- */
-.screen-columns {
-  min-height: 320px;
+/* Prevents error banner from collapsing into the input area */
+.error-banner {
+  margin-top: 0;
 }
 
 @media screen and (max-width: 768px) {
-  .screen-columns {
-    flex-direction: column;
-  }
-
-  .cyber-title {
-    font-size: 2.5rem;
-  }
-
-  .cyber-subtitle {
-    font-size: 0.85rem;
-  }
-
   .vintage-computer {
     margin: 0 0.25rem;
   }
 }
 
 @media screen and (max-width: 480px) {
-  .cyber-title {
-    font-size: 1.8rem;
-    letter-spacing: 0.08em;
-  }
-
-  .main-section {
-    padding: 1rem 0.25rem;
-  }
-
   .screen-body {
     padding: 0.5rem;
   }
-
-  .input-panel,
-  .preview-panel {
-    padding: 0.5rem;
-  }
-}
-
-/* --- Analyze Button Row --- */
-.analyze-hint {
-  font-family: var(--font-tech);
-  font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.35);
-  margin-top: 0.3rem;
-}
-
-/* --- Results Panel --- */
-.results-panel {
-  margin-top: 1rem;
-}
-
-/* --- Error Banner --- */
-.error-banner {
-  margin-top: 0;
-}
-
-/* --- Footer --- */
-.app-footer {
-  margin-top: 2rem;
 }

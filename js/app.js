@@ -2,17 +2,6 @@
    app.js — Entry Point, Global Error Handling, Wiring
    ============================================================ */
 
-/**
- * This file serves as the main entry point.
- * Most logic lives in state.js (Alpine component), rdkit.js,
- * validate.js, preview.js, and api.js.
- *
- * This file handles:
- *  - Global error catching
- *  - Console branding
- *  - Any post-boot wiring that doesn't belong in Alpine
- */
-
 (function () {
   'use strict';
 

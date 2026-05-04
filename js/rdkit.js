@@ -101,26 +101,17 @@ const RDKitService = (() => {
     if (!mol) return null;
     const desc = {};
     try {
-      // Molecular weight
-      try { desc.MW = parseFloat(mol.get_descriptors().AMW.toFixed(2)); } catch (_) {}
-      // LogP
-      try { desc.logP = parseFloat(mol.get_descriptors().CrippenClogP.toFixed(2)); } catch (_) {}
-      // HBA
-      try { desc.HBA = mol.get_descriptors().NumHAcceptors; } catch (_) {}
-      // HBD
-      try { desc.HBD = mol.get_descriptors().NumHDonors; } catch (_) {}
-      // Rotatable bonds
-      try { desc.RotBonds = mol.get_descriptors().NumRotatableBonds; } catch (_) {}
-      // TPSA
-      try { desc.TPSA = parseFloat(mol.get_descriptors().TPSA.toFixed(2)); } catch (_) {}
-      // Heavy atom count
-      try { desc.HeavyAtoms = mol.get_descriptors().HeavyAtomCount; } catch (_) {}
-      // Ring count
-      try { desc.RingCount = mol.get_descriptors().NumRings; } catch (_) {}
-      // Aromatic rings
-      try { desc.AromaticRings = mol.get_descriptors().NumAromaticRings; } catch (_) {}
-      // Fraction Csp3
-      try { desc.FracCsp3 = parseFloat(mol.get_descriptors().FractionCSP3.toFixed(3)); } catch (_) {}
+      const d = mol.get_descriptors();
+      try { desc.MW = parseFloat(d.AMW.toFixed(2)); } catch (_) {}
+      try { desc.logP = parseFloat(d.CrippenClogP.toFixed(2)); } catch (_) {}
+      try { desc.HBA = d.NumHAcceptors; } catch (_) {}
+      try { desc.HBD = d.NumHDonors; } catch (_) {}
+      try { desc.RotBonds = d.NumRotatableBonds; } catch (_) {}
+      try { desc.TPSA = parseFloat(d.TPSA.toFixed(2)); } catch (_) {}
+      try { desc.HeavyAtoms = d.HeavyAtomCount; } catch (_) {}
+      try { desc.RingCount = d.NumRings; } catch (_) {}
+      try { desc.AromaticRings = d.NumAromaticRings; } catch (_) {}
+      try { desc.FracCsp3 = parseFloat(d.FractionCSP3.toFixed(3)); } catch (_) {}
     } catch (e) {
       console.warn('[RDKit] Descriptor calculation warning:', e.message);
     }

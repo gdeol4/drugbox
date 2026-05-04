@@ -2,7 +2,7 @@
    components.css — Buttons, Cards, Badges, Inputs, Loaders
    ============================================================ */
 
-/* --- SMILES Input --- */
+/* --- SMILES Input (legacy, overridden by terminal.css) --- */
 .smiles-input {
   width: 100%;
   background: #0a0a0a;
@@ -34,7 +34,7 @@
   cursor: not-allowed;
 }
 
-/* --- Input Label --- */
+/* --- Input Label (legacy) --- */
 .input-label {
   display: block;
   font-family: var(--font-tech);
@@ -45,7 +45,7 @@
   margin-bottom: 0.5rem;
 }
 
-/* --- Input Status --- */
+/* --- Input Status (legacy) --- */
 .input-status {
   margin-top: 0.5rem;
   font-family: var(--font-tech);
@@ -55,7 +55,7 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* --- Analyze Button --- */
+/* --- Analyze Button (legacy) --- */
 .btn-analyze {
   display: inline-block;
   background: transparent;
@@ -111,18 +111,9 @@
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* --- Descriptor Badges (frontend strip) --- */
+/* --- Descriptor Badges (legacy strip - hidden) --- */
 .descriptors-strip {
-  font-family: var(--font-tech);
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.75);
-  padding: 0.5rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  margin-top: 0.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  align-items: center;
+  display: none;
 }
 
 .desc-badge {
@@ -136,7 +127,7 @@
   white-space: nowrap;
 }
 
-/* --- Results Panel --- */
+/* --- Results Panel (legacy) --- */
 .results-panel {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -165,7 +156,7 @@
   padding: 1rem;
 }
 
-/* --- Result Sections --- */
+/* --- Result Sections (legacy) --- */
 .result-section {
   margin-bottom: 1.25rem;
 }
@@ -185,14 +176,14 @@
   padding-bottom: 0.3rem;
 }
 
-/* --- Result Grid --- */
+/* --- Result Grid (legacy) --- */
 .result-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.5rem;
 }
 
-/* --- Result Card --- */
+/* --- Result Card (legacy) --- */
 .result-card {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -239,7 +230,7 @@
   border-left: 3px solid rgba(255, 255, 255, 0.2);
 }
 
-/* --- Warnings List --- */
+/* --- Warnings List (legacy) --- */
 .warnings-list {
   list-style: none;
   padding: 0;
@@ -263,7 +254,7 @@
   flex-shrink: 0;
 }
 
-/* --- Raw JSON Toggle --- */
+/* --- Raw JSON Toggle (legacy) --- */
 .raw-toggle {
   cursor: pointer;
   font-family: var(--font-tech);
@@ -292,7 +283,7 @@
   overflow-y: auto;
 }
 
-/* --- Error Banner --- */
+/* --- Error Banner (legacy) --- */
 .error-banner {
   background: rgba(255, 80, 80, 0.08);
   border: 1px solid rgba(255, 80, 80, 0.3);
@@ -325,7 +316,7 @@
   color: #ffffff;
 }
 
-/* --- Preview Placeholder --- */
+/* --- Preview Placeholder (legacy) --- */
 .preview-placeholder {
   display: flex;
   flex-direction: column;
@@ -347,7 +338,7 @@
   animation: spin-anim 8s linear infinite;
 }
 
-/* --- Molecule SVG Container --- */
+/* --- Molecule SVG Container (legacy) --- */
 .mol-svg-container {
   display: flex;
   align-items: center;
